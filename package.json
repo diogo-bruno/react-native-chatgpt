@@ -1,0 +1,28 @@
+{
+  "name": "react-native-chatgpt",
+  "version": "0.0.1",
+  "description": "A simple integration with web chatGPT",
+  "license": "MIT",
+  "main": "src/ChatGPT.tsx",
+  "types": "src/ChatGPT.tsx",
+  "keywords": [
+    "react-native",
+    "react-native-chatgpt",
+    "Chat GPT"
+  ],
+  "scripts": {},
+  "author": "Diogo (https://github.com/diogo-bruno)",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:diogo-bruno/react-native-chatgpt.git"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "react-native": ">=0.70.0",
+    "react-native-web": ">=0.18.10",
+    "react-native-webview": ">=11.26.0"
+  },
+  "devDependencies": {
+    "prettier": "3.0.0"
+  }
+}
