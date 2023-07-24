@@ -182,39 +182,14 @@ const ChatGPT = forwardRef((props: ChatGPTProps, ref: any) => {
     return true;
   };
 
-  const debugResponse = (
-    resolve: Function,
-    reject: Function,
-    onProgress: Function,
-  ) => {
-    let b = 1;
-
-    const a = setInterval(() => {
-      onProgress(`##${b}`);
-      b++;
-    }, 100);
-
-    setTimeout(() => {
-      clearInterval(a);
-      resolve({message: `debug - ${b}`});
-    }, 5000);
-  };
-
   useImperativeHandle(ref, () => ({
     getResponse: (message: string, onProgress: (value: string) => void) => {
-      const debug = false;
       return new Promise((resolve, reject) => {
         setConversationResolve(() => (value: any) => resolve(value));
         setConversationReject(() => (value: any) => reject(value));
         setConversationOnProgress(() => (value: any) => onProgress(value));
-
         setMessageConversation(message);
-
-        if (debug) {
-          debugResponse(resolve, reject, onProgress);
-        } else {
-          getResponse();
-        }
+        getResponse();
       });
     },
     loginChatGPT,
