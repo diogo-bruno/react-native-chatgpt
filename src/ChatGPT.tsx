@@ -33,7 +33,7 @@ const JSONtryParse = (text: string) => {
   }
 };
 
-const ChatGPT = forwardRef((props: ChatGPTProps, ref) => {
+const ChatGPT = forwardRef((props: ChatGPTProps, ref: any) => {
   const [webviewAuthSession, setWebviewAuthSession] =
     React.useState<WebView | null>(null);
   const [webviewLogin, setWebviewLogin] = React.useState<WebView | null>(null);
@@ -52,10 +52,20 @@ const ChatGPT = forwardRef((props: ChatGPTProps, ref) => {
   const [conversationOnProgress, setConversationOnProgress] =
     React.useState<(value: string) => void>();
 
-  const messageSetLogged = (data: string) => {
-    if (/\{.*\}.*logged/i.test(data)) {
+  const resetFunctionsConversation = () => {
+    setConversationResolve(undefined);
+    setConversationReject(undefined);
+    setConversationOnProgress(undefined);
+  };
+
+  React.useEffect(() => {
+    resetFunctionsConversation();
+  }, []);
+
+  const messageSetLogged = (data: any) => {
+    if (`${data}`.indexOf('{') > -1 && `${data}`.indexOf('logged') > -1) {
       const jsonData = JSONtryParse(data);
-      if (jsonData?.logged) {
+      if (jsonData.logged) {
         setLogged(true);
         setModalLogin(false);
         injectScriptConversation();
@@ -65,10 +75,13 @@ const ChatGPT = forwardRef((props: ChatGPTProps, ref) => {
     }
   };
 
-  const messageCheckLoginStartConversation = (data: string) => {
-    if (/\{.*\}.*startConversation/i.test(data)) {
+  const messageCheckLoginStartConversation = (data: any) => {
+    if (
+      `${data}`.indexOf('{') > -1 &&
+      `${data}`.indexOf('startConversation') > -1
+    ) {
       const jsonData = JSONtryParse(data);
-      if (jsonData?.startConversation) {
+      if (jsonData.startConversation) {
         injectScriptConversation();
       } else {
         setModalLogin(true);
@@ -76,33 +89,47 @@ const ChatGPT = forwardRef((props: ChatGPTProps, ref) => {
     }
   };
 
-  const messageResponseText = (data: string) => {
-    if (/^data:.*\{.*\}(?!.*data: \[DONE\])/i.test(data)) {
-      const validJsonStrings = data
-        .split('\n')
-        .filter((str: string) => str.trim().startsWith('data:'));
+  const messageResponseText = (data: any) => {
+    if (
+      `${data}`.startsWith('data:') &&
+      `${data}`.indexOf('{') > -1 &&
+      `${data}`.indexOf('data: [DONE]') === -1
+    ) {
+      try {
+        const validJsonStrings = data
+          .split('\n')
+          .filter((str: string) => str.trim().startsWith('data:'));
 
-      const jsonDataArray = validJsonStrings.map((str: string) =>
-        JSONtryParse(str.slice(5).trim()),
-      );
+        const jsonDataArray = validJsonStrings.map((str: string) =>
+          JSONtryParse(str.slice(5).trim()),
+        );
 
-      jsonDataArray.forEach((jsonData: any) => {
-        if (jsonData?.message?.content?.content_type === 'text') {
-          const messageResponse = jsonData.message.content.parts[0];
-
-          if (conversationOnProgress && messageResponse) {
-            conversationOnProgress(messageResponse);
-          }
-
+        jsonDataArray.forEach((jsonData: any) => {
           if (
-            jsonData.message.metadata.is_complete &&
-            conversationResolve &&
-            messageResponse
+            jsonData?.message?.content?.content_type === 'text' &&
+            jsonData?.message?.content?.parts
           ) {
-            conversationResolve(messageResponse);
+            const messageResponse = jsonData.message.content.parts[0];
+
+            if (conversationOnProgress && messageResponse) {
+              conversationOnProgress(messageResponse);
+            }
+
+            if (
+              jsonData?.message?.metadata?.is_complete &&
+              conversationResolve &&
+              messageResponse
+            ) {
+              conversationResolve(messageResponse);
+              resetFunctionsConversation();
+            }
           }
-        }
-      });
+        });
+      } catch (error) {
+        console.log(error);
+        if (conversationReject)
+          conversationReject({error: JSON.stringify(error)});
+      }
     }
   };
 
@@ -115,6 +142,8 @@ const ChatGPT = forwardRef((props: ChatGPTProps, ref) => {
       messageCheckLoginStartConversation(data);
 
       messageResponseText(data);
+
+      //console.log(data);
     } catch (error) {
       console.error(error);
       if (conversationReject)
@@ -146,7 +175,9 @@ const ChatGPT = forwardRef((props: ChatGPTProps, ref) => {
     webviewAuthSession?.requestFocus();
     await sleep(500);
     webviewAuthSession?.injectJavaScript(ScriptLogout());
-    await sleep(2000);
+    await sleep(1000);
+    webviewAuthSession?.injectJavaScript(ScriptLogout());
+    await sleep(1000);
     webviewAuthSession?.reload();
     return true;
   };
@@ -200,6 +231,7 @@ const ChatGPT = forwardRef((props: ChatGPTProps, ref) => {
         onRequestClose={() => {
           setModalLogin(false);
           if (conversationReject) conversationReject({error: 'Login canceled'});
+          resetFunctionsConversation();
         }}>
         <View style={styles.modalContainer}>
           <Text style={styles.title}>Login ChatGPT</Text>
@@ -212,6 +244,9 @@ const ChatGPT = forwardRef((props: ChatGPTProps, ref) => {
             onLoadEnd={() =>
               webviewLogin?.injectJavaScript(ScriptLoginFinished())
             }
+            onNavigationStateChange={() => {
+              webviewLogin?.injectJavaScript(ScriptLoginFinished());
+            }}
             javaScriptEnabled={true}
             userAgent={userAgent}
             originWhitelist={originWhitelist}

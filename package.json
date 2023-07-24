@@ -23,6 +23,7 @@
     "react-native-webview": ">=11.26.0"
   },
   "devDependencies": {
+    "@types/react": "^18.2.15",
     "prettier": "3.0.0"
   }
 }

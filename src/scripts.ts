@@ -87,11 +87,22 @@ export const ScriptCheckLogged = () => {
 };
 
 export const ScriptLoginFinished = () => {
-  return `setInterval(() => {
+  return `function _displayNone() {
+    if (
+      window.location.pathname !== '/auth/login' &&
+      document.querySelector('#__next')
+    )
+      document.querySelector('#__next').style.display = 'none';
+  }
+  _displayNone();
+  if (typeof ___scriptInterval !== 'undefined') clearInterval(___scriptInterval);
+  var ___scriptInterval = setInterval(() => {
+    _displayNone();
+    //window.ReactNativeWebView.postMessage(JSON.stringify({ consoleLog: document.querySelector('#prompt-textarea') }));
     if (document.querySelector('#prompt-textarea')) {
-      window.ReactNativeWebView.postMessage(JSON.stringify({ logged: true }));
+      window.ReactNativeWebView.postMessage(JSON.stringify({logged: true}));
     }
-  }, 1000);
+  }, 500);
   `;
 };
 

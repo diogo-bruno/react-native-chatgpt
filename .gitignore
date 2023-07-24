@@ -8,3 +8,6 @@ npm-debug.log
 *.iml
 .idea/
 .vscode/
+
+README-MY.MD
+src/teste.js
