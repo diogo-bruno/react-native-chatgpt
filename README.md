@@ -27,23 +27,25 @@ export default function Component() {
       <View style={styles.container}>
         <ChatGPT ref={refChatGPT} />
         <Button
-          onPress={() => {
-            refChatGPT.current?.loginChatGPT();
+          onPress={async () => {
+            const success = await refChatGPT.current?.loginChatGPT();
+            console.log('login success:', success);
           }}
           title="Login"
         />
         <Button
-          onPress={() => {
-            refChatGPT.current?.logoutChatGPT();
+          onPress={async () => {
+            const success = await refChatGPT.current?.logoutChatGPT();
+            console.log('logout success:', success);
           }}
           title="Logout"
         />
         <Button
           onPress={async () => {
             const message = await refChatGPT.current?.getResponse('Hello', (data: string) => {
-              console.log('onProgress: ', data);
+              console.log('onProgress:', data);
             });
-            console.log('messageResponse: ', message);
+            console.log('await message:', message);
           }}
           title="Start conversation"
         />

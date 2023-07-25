@@ -100,7 +100,7 @@ export const ScriptLoginFinished = () => {
     _displayNone();
     //window.ReactNativeWebView.postMessage(JSON.stringify({ consoleLog: document.querySelector('#prompt-textarea') }));
     if (document.querySelector('#prompt-textarea')) {
-      window.ReactNativeWebView.postMessage(JSON.stringify({logged: true}));
+      window.ReactNativeWebView.postMessage(JSON.stringify({logged: true, login: true}));
     }
   }, 500);
   `;
