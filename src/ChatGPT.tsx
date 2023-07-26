@@ -4,6 +4,7 @@ import { WebView } from 'react-native-webview';
 import {
   ScriptCheckLogged,
   ScriptCheckLoginStartConversation,
+  ScriptCheckLogout,
   ScriptGetScriptStartConversation,
   ScriptLoginFinished,
   ScriptLogout,
@@ -72,8 +73,8 @@ const ChatGPT = forwardRef((props: ChatGPTProps, ref: any) => {
         loginResolve(jsonData.logged);
       }
 
-      if (logoutResolve) {
-        logoutResolve(jsonData.logged);
+      if (logoutResolve && jsonData.logout) {
+        logoutResolve(true);
       }
     }
   };
@@ -100,11 +101,11 @@ const ChatGPT = forwardRef((props: ChatGPTProps, ref: any) => {
           if (jsonData?.message?.content?.content_type === 'text' && jsonData?.message?.content?.parts) {
             const messageResponse = jsonData.message.content.parts[0];
 
-            if (conversationOnProgress && messageResponse) {
+            if (jsonData.message?.status === 'in_progress' && conversationOnProgress && messageResponse) {
               conversationOnProgress(messageResponse);
             }
 
-            if (jsonData?.message?.metadata?.is_complete && conversationResolve && messageResponse) {
+            if (jsonData.message?.metadata?.is_complete && conversationResolve && messageResponse) {
               conversationResolve(messageResponse);
               resetFunctionsConversation();
             }
@@ -150,20 +151,18 @@ const ChatGPT = forwardRef((props: ChatGPTProps, ref: any) => {
   const loginChatGPT = () => {
     if (!logged) {
       setModalLogin(true);
+    } else {
+      if (loginResolve) loginResolve(true);
     }
   };
 
   const logoutChatGPT = async () => {
     try {
+      resetFunctionsConversation();
+
       webviewAuthSession?.requestFocus();
       await sleep(500);
       webviewAuthSession?.injectJavaScript(ScriptLogout());
-      await sleep(1000);
-      webviewAuthSession?.injectJavaScript(ScriptLogout());
-      await sleep(1000);
-      webviewAuthSession?.reload();
-      await sleep(1000);
-      webviewAuthSession?.injectJavaScript(ScriptCheckLogged());
     } catch (error) {
       console.error(error);
       if (logoutResolve) logoutResolve(false);
@@ -242,6 +241,9 @@ const ChatGPT = forwardRef((props: ChatGPTProps, ref: any) => {
             uri: `https://chat.openai.com/api/auth/session?${new Date().getTime()}`,
           }}
           onLoadEnd={() => webviewAuthSession?.injectJavaScript(ScriptCheckLogged())}
+          onNavigationStateChange={() => {
+            webviewAuthSession?.injectJavaScript(ScriptCheckLogout());
+          }}
           javaScriptEnabled={true}
           userAgent={userAgent}
           originWhitelist={originWhitelist}

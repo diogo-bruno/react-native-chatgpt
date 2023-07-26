@@ -119,6 +119,15 @@ export const ScriptLogout = () => {
   return `window.location.assign('https://chat.openai.com/auth/logout'); window.location.href = 'https://chat.openai.com/auth/logout'`;
 };
 
+export const ScriptCheckLogout = () => {
+  return `if (document.querySelector('body pre')?.innerText === '{}') {
+    window.ReactNativeWebView.postMessage(JSON.stringify({ logged: false, logout: true }));
+  } else if (document.querySelector('body pre')?.innerText ? JSON.parse(document.querySelector('body pre')?.innerText).accessToken : false) {
+    window.ReactNativeWebView.postMessage(JSON.stringify({ logged: true, logout: true }));
+  }
+  `;
+};
+
 export const sleep = (ms: number) => {
   return new Promise((resolve) => setTimeout(resolve, ms));
 };
