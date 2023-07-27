@@ -81,7 +81,7 @@ export const ScriptCheckLogged = () => {
   return `if (document.querySelector('body pre')?.innerText === '{}') {
     window.ReactNativeWebView.postMessage(JSON.stringify({ logged: false }));
   } else if (document.querySelector('body pre')?.innerText ? JSON.parse(document.querySelector('body pre')?.innerText).accessToken : false) {
-    window.ReactNativeWebView.postMessage(JSON.stringify({ logged: true }));
+    window.ReactNativeWebView.postMessage(JSON.stringify({ logged: true, login: true }));
   }
   `;
 };
@@ -120,10 +120,10 @@ export const ScriptLogout = () => {
 };
 
 export const ScriptCheckLogout = () => {
-  return `if (document.querySelector('body pre')?.innerText === '{}') {
-    window.ReactNativeWebView.postMessage(JSON.stringify({ logged: false, logout: true }));
-  } else if (document.querySelector('body pre')?.innerText ? JSON.parse(document.querySelector('body pre')?.innerText).accessToken : false) {
+  return `if (document.querySelector('body pre')?.innerText ? JSON.parse(document.querySelector('body pre').innerText).accessToken : false) {
     window.ReactNativeWebView.postMessage(JSON.stringify({ logged: true, logout: true }));
+  } else if (!document.querySelector('body pre') || !document.querySelector('body pre')?.innerText || document.querySelector('body pre')?.innerText === '{}') {
+    window.ReactNativeWebView.postMessage(JSON.stringify({ logged: false, logout: true }));
   }
   `;
 };

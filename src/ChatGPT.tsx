@@ -19,7 +19,7 @@ export interface ChatGPTRef {
 
 interface ChatGPTProps {}
 
-const originWhitelist = ['https://*', 'http://*', 'file://*', 'sms://*'];
+const originWhitelist = ['https://*'];
 const userAgent = 'Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; AS; rv:11.0) like Gecko';
 
 const JSONtryParse = (text: string) => {
@@ -54,8 +54,14 @@ const ChatGPT = forwardRef((props: ChatGPTProps, ref: any) => {
     setConversationOnProgress(undefined);
   };
 
+  const resetFunctionsLoginLogout = () => {
+    setLoginResolve(undefined);
+    setLogoutResolve(undefined);
+  };
+
   React.useEffect(() => {
     resetFunctionsConversation();
+    resetFunctionsLoginLogout();
   }, []);
 
   const messageSetLogged = (data: any) => {
@@ -71,10 +77,12 @@ const ChatGPT = forwardRef((props: ChatGPTProps, ref: any) => {
 
       if (loginResolve && jsonData.login) {
         loginResolve(jsonData.logged);
+        resetFunctionsLoginLogout();
       }
 
       if (logoutResolve && jsonData.logout) {
         logoutResolve(true);
+        resetFunctionsLoginLogout();
       }
     }
   };
@@ -121,14 +129,9 @@ const ChatGPT = forwardRef((props: ChatGPTProps, ref: any) => {
   const messageRecived = (event: any) => {
     try {
       const data = event.nativeEvent.data;
-
       messageSetLogged(data);
-
       messageCheckLoginStartConversation(data);
-
       messageResponseText(data);
-
-      //console.log(data);
     } catch (error) {
       console.error(error);
       if (conversationReject) conversationReject({ error: JSON.stringify(error) });
@@ -149,17 +152,16 @@ const ChatGPT = forwardRef((props: ChatGPTProps, ref: any) => {
   };
 
   const loginChatGPT = () => {
-    if (!logged) {
+    if (logged && loginResolve) {
+      loginResolve(true);
+    } else if (!logged) {
       setModalLogin(true);
-    } else {
-      if (loginResolve) loginResolve(true);
     }
   };
 
   const logoutChatGPT = async () => {
     try {
       resetFunctionsConversation();
-
       webviewAuthSession?.requestFocus();
       await sleep(500);
       webviewAuthSession?.injectJavaScript(ScriptLogout());
@@ -199,31 +201,35 @@ const ChatGPT = forwardRef((props: ChatGPTProps, ref: any) => {
     <>
       <Modal
         presentationStyle="pageSheet"
+        animationType="slide"
         visible={modalLogin}
         style={{ zIndex: 1100 }}
         statusBarTranslucent={true}
         onRequestClose={() => {
           setModalLogin(false);
           if (conversationReject) conversationReject({ error: 'Login canceled' });
-
+          if (loginResolve) loginResolve(false);
           resetFunctionsConversation();
-
-          if (loginResolve) {
-            loginResolve(false);
-          }
         }}
       >
         <View style={styles.modalContainer}>
           <Text style={styles.title}>Login ChatGPT</Text>
           <View style={styles.separator}></View>
           <WebView
-            startInLoadingState={false}
+            startInLoadingState={true}
             ref={setWebviewLogin}
             style={styles.container}
             source={{ uri: `https://chat.openai.com/?${new Date().getTime()}` }}
             onLoadEnd={() => webviewLogin?.injectJavaScript(ScriptLoginFinished())}
             onNavigationStateChange={() => {
               webviewLogin?.injectJavaScript(ScriptLoginFinished());
+            }}
+            onError={() => {
+              if (conversationReject) conversationReject({ error: 'Error on chat.openai.com' });
+              if (loginResolve) {
+                loginResolve(false);
+              }
+              resetFunctionsConversation();
             }}
             javaScriptEnabled={true}
             userAgent={userAgent}
@@ -241,8 +247,11 @@ const ChatGPT = forwardRef((props: ChatGPTProps, ref: any) => {
             uri: `https://chat.openai.com/api/auth/session?${new Date().getTime()}`,
           }}
           onLoadEnd={() => webviewAuthSession?.injectJavaScript(ScriptCheckLogged())}
-          onNavigationStateChange={() => {
-            webviewAuthSession?.injectJavaScript(ScriptCheckLogout());
+          onNavigationStateChange={(event) => {
+            if (event.url === 'https://chat.openai.com/auth/login') webviewAuthSession?.injectJavaScript(ScriptCheckLogout());
+          }}
+          onError={() => {
+            if (conversationReject) conversationReject({ error: 'Error on chat.openai.com' });
           }}
           javaScriptEnabled={true}
           userAgent={userAgent}

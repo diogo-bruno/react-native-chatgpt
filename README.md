@@ -22,32 +22,41 @@ import ChatGPT, { ChatGPTRef } from 'react-native-chatgpt';
 export default function Component() {
   const refChatGPT = React.useRef<ChatGPTRef>(null);
 
+  const getTextInput = async (): Promise<string> => {
+    return new Promise((resolve) => {
+      Alert.prompt('Search', 'Type something', [{ text: 'OK', onPress: (value) => resolve(`${value}`) }], 'plain-text');
+    });
+  };
+
   return (
     <>
       <View style={styles.container}>
         <ChatGPT ref={refChatGPT} />
         <Button
           onPress={async () => {
-            const success = await refChatGPT.current?.loginChatGPT();
-            console.log('login success:', success);
+            const response = await refChatGPT.current?.loginChatGPT();
+            Alert.alert(`login: ${response}`);
           }}
           title="Login"
         />
         <Button
           onPress={async () => {
-            const success = await refChatGPT.current?.logoutChatGPT();
-            console.log('logout success:', success);
+            const response = await refChatGPT.current?.logoutChatGPT();
+            Alert.alert(`logout: ${response}`);
           }}
           title="Logout"
         />
         <Button
           onPress={async () => {
-            const message = await refChatGPT.current?.getResponse('Hello', (data: string) => {
-              console.log('onProgress:', data);
-            });
-            console.log('await message:', message);
+            const search = await getTextInput();
+            if (search) {
+              const message = await refChatGPT.current?.getResponse(`${search}`, (data: string) => {
+                console.log('onProgress:', data);
+              });
+              Alert.alert(`response: ${message}`);
+            }
           }}
-          title="Start conversation"
+          title="Search answer"
         />
       </View>
     </>
