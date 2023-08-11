@@ -1,5 +1,5 @@
 import React, { forwardRef, useImperativeHandle } from 'react';
-import { Dimensions, Modal, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, Modal, Platform, StyleSheet, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import {
   ScriptCheckLogged,
@@ -20,7 +20,10 @@ export interface ChatGPTRef {
 interface ChatGPTProps {}
 
 const originWhitelist = ['https://*'];
-const userAgent = 'Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; AS; rv:11.0) like Gecko';
+const userAgent =
+  Platform.OS === 'ios'
+    ? 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1'
+    : 'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.5790.166 Mobile Safari/537.36';
 
 const JSONtryParse = (text: string) => {
   try {

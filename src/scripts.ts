@@ -39,7 +39,7 @@ export const ScriptGetScriptStartConversation = (message: string) => {
       headers: {
         accept: 'text/event-stream',
         'accept-language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
-        authorization: 'Bearer ' + accessToken,
+        'authorization': 'Bearer ' + accessToken,
         'content-type': 'application/json',
         'sec-ch-ua': '"Not.A/Brand";v="8", "Chromium";v="114", "Google Chrome";v="114"',
         'sec-ch-ua-mobile': '?0',
@@ -47,7 +47,7 @@ export const ScriptGetScriptStartConversation = (message: string) => {
         'sec-fetch-dest': 'empty',
         'sec-fetch-mode': 'cors',
         'sec-fetch-site': 'same-origin',
-        Referer: 'https://chat.openai.com/?model=text-davinci-002-render-sha',
+        'Referer': 'https://chat.openai.com/?model=text-davinci-002-render-sha',
         'Referrer-Policy': 'same-origin',
       },
       body: JSON.stringify(body),
