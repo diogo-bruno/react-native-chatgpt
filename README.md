@@ -12,14 +12,16 @@ The "react-native-chatgpt" plugin provides an API with the real functionality of
 
 ```ssh
 npm install https://github.com/diogo-bruno/react-native-chatgpt.git
+or
+yarn add https://github.com/diogo-bruno/react-native-chatgpt.git
 ```
 
 ```javascript
 import React from 'react';
-import { View, Button, StyleSheet } from 'react-native';
+import { View, Button, StyleSheet, Alert } from 'react-native';
 import ChatGPT, { ChatGPTRef } from 'react-native-chatgpt';
 
-export default function Component() {
+export default function AppChatGpt() {
   const refChatGPT = React.useRef<ChatGPTRef>(null);
 
   const getTextInput = async (): Promise<string> => {
@@ -29,37 +31,35 @@ export default function Component() {
   };
 
   return (
-    <>
-      <View style={styles.container}>
-        <ChatGPT ref={refChatGPT} />
-        <Button
-          onPress={async () => {
-            const response = await refChatGPT.current?.loginChatGPT();
-            Alert.alert(`login: ${response}`);
-          }}
-          title="Login"
-        />
-        <Button
-          onPress={async () => {
-            const response = await refChatGPT.current?.logoutChatGPT();
-            Alert.alert(`logout: ${response}`);
-          }}
-          title="Logout"
-        />
-        <Button
-          onPress={async () => {
-            const search = await getTextInput();
-            if (search) {
-              const message = await refChatGPT.current?.getResponse(`${search}`, (data: string) => {
-                console.log('onProgress:', data);
-              });
-              Alert.alert(`response: ${message}`);
-            }
-          }}
-          title="Search answer"
-        />
-      </View>
-    </>
+    <View style={styles.container}>
+      <ChatGPT ref={refChatGPT} />
+      <Button
+        onPress={async () => {
+          const response = await refChatGPT.current?.loginChatGPT();
+          Alert.alert(`login: ${response}`);
+        }}
+        title="Login"
+      />
+      <Button
+        onPress={async () => {
+          const response = await refChatGPT.current?.logoutChatGPT();
+          Alert.alert(`logout: ${response}`);
+        }}
+        title="Logout"
+      />
+      <Button
+        onPress={async () => {
+          const search = await getTextInput();
+          if (search) {
+            const message = await refChatGPT.current?.getResponse(`${search}`, (data: string) => {
+              console.log('onProgress:', data);
+            });
+            Alert.alert(`response: ${message}`);
+          }
+        }}
+        title="Search answer"
+      />
+    </View>
   );
 }
 
@@ -68,6 +68,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-  }
+  },
 });
 ```
