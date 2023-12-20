@@ -11,6 +11,7 @@ The "react-native-chatgpt" plugin provides an API with the real functionality of
 # Example
 
 ## Install Lib required
+
 ```ssh
 npm install react-native-webview
 ```
@@ -20,41 +21,50 @@ npm install https://github.com/diogo-bruno/react-native-chatgpt.git
 ```
 
 ## Code example
+
+Example: <a href="https://github.com/diogo-bruno/react-native-chatgpt-example/App.tsx">App.tsx</a>
+
 ```javascript
+import { StatusBar } from 'expo-status-bar';
 import React from 'react';
-import { View, Button, StyleSheet, Alert } from 'react-native';
+import { Alert, Button, Platform, StyleSheet, View } from 'react-native';
+
 import ChatGPT, { ChatGPTRef } from 'react-native-chatgpt';
 
-export default function AppChatGpt() {
+export default function App() {
   const refChatGPT = React.useRef<ChatGPTRef>(null);
 
   const getTextInput = async (): Promise<string> => {
     return new Promise((resolve) => {
-      // ios Alert input (not working Android)
-      Alert.prompt('Search', 'Type something', [{ text: 'OK', onPress: (value) => resolve(`${value}`) }], 'plain-text');
-
-      // if Android:
-      // resolve('Text here')
+      if (Platform.OS == 'ios') {
+        Alert.prompt('Search', 'Type something', [{ text: 'OK', onPress: (value) => resolve(`${value}`) }], 'plain-text');
+      } else {
+        resolve('Hello World');
+      }
     });
   };
 
   return (
     <View style={styles.container}>
+      <StatusBar style="auto" />
       <ChatGPT ref={refChatGPT} />
+
       <Button
         onPress={async () => {
           const response = await refChatGPT.current?.loginChatGPT();
-          Alert.alert(`login: ${response}`);
+          Alert.alert(`login: ${JSON.stringify(response)}`);
         }}
         title="Login"
       />
+
       <Button
         onPress={async () => {
           const response = await refChatGPT.current?.logoutChatGPT();
-          Alert.alert(`logout: ${response}`);
+          Alert.alert(`logout: ${JSON.stringify(response)}`);
         }}
         title="Logout"
       />
+
       <Button
         onPress={async () => {
           const search = await getTextInput();
@@ -62,7 +72,8 @@ export default function AppChatGpt() {
             const message = await refChatGPT.current?.getResponse(`${search}`, (data: string) => {
               console.log('onProgress:', data);
             });
-            Alert.alert(`response: ${message}`);
+
+            Alert.alert(`Response: ${JSON.stringify(message)}`);
           }
         }}
         title="Search answer"
@@ -74,8 +85,11 @@ export default function AppChatGpt() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
   },
 });
+
+
 ```
