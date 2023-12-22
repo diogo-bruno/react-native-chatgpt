@@ -7,7 +7,12 @@ const ScriptGetAccessToken = () => {
           if (data && data.accessToken) {
             localStorage.setItem('session', JSON.stringify(data));
             callback(data.accessToken);
+          } else {
+            callback(null);
           }
+        }).catch((error) => {
+          console.error(error);
+          callback(null);
         });
     }
     const currentSession = JSON.parse(localStorage.getItem('session'));
@@ -89,7 +94,7 @@ export const ScriptGetScriptStartConversation = (message: string) => {
           const { done, value } = await reader.read();
           dataBody = new TextDecoder().decode(value);
           clearTimeout(___scriptConversationTimeout);
-          window.ReactNativeWebView.postMessage(JSON.stringify({ conversation: dataBody }));
+          window.ReactNativeWebView?.postMessage(JSON.stringify({ conversation: dataBody }));
           if (done) {
             reader.releaseLock();
             final = true;
@@ -97,7 +102,7 @@ export const ScriptGetScriptStartConversation = (message: string) => {
         }
       } catch (error) {
         console.error(error);
-        window.ReactNativeWebView.postMessage(JSON.stringify({ errorConversation: JSON.stringify(error) }));
+        window.ReactNativeWebView?.postMessage(JSON.stringify({ errorConversation: JSON.stringify(error) }));
       }
     });
   }
@@ -107,42 +112,56 @@ export const ScriptGetScriptStartConversation = (message: string) => {
   });
 
   var ___scriptConversationTimeout = setTimeout(() => {
-    window.ReactNativeWebView.postMessage(JSON.stringify({ errorConversation: 'Timeout occurred' }));
+    window.ReactNativeWebView?.postMessage(JSON.stringify({ errorConversation: 'Timeout occurred' }));
   }, 90*1000)
   
   `;
   return script;
 };
 
+export const StartLoginChatGPT = () => {
+  return `document.querySelector('#__next')?.style.display='none'; document.querySelector('[data-testid="login-button"]')?.click()`;
+};
+
 export const ScriptCheckLogged = () => {
   return `
   ${ScriptGetAccessToken()}
   
-  getAccessToken((accessToken) => {
-    if (accessToken) {
-      window.ReactNativeWebView.postMessage(JSON.stringify({ logged: true, login: true }));
-    } else {
-      window.ReactNativeWebView.postMessage(JSON.stringify({ logged: false }));
-    }
-  });
-  
+  if(window.location.href.indexOf("auth/login") > -1){
+    window.ReactNativeWebView?.postMessage(JSON.stringify({ logged: false }));
+  } else {
+    getAccessToken((accessToken) => {
+      if (accessToken) {
+        window.ReactNativeWebView?.postMessage(JSON.stringify({ logged: true, login: true }));
+      } else {
+        window.ReactNativeWebView?.postMessage(JSON.stringify({ logged: false }));
+      }
+    });
+  }
+
   `;
 };
 
-export const ScriptLoginFinished = () => {
+export const ScriptLoginFinished = (urlChatGPT: string) => {
   return `
-  function _displayNone() {
-    if (window.location.pathname !== '/auth/login' && document.querySelector('#__next')) document.querySelector('#__next').style.display = 'none';
+  function __displayNone() {
+   if (window.location.pathname !== '/auth/login' && document.querySelector('#__next')){ document.querySelector('#__next').style.display = 'none';}
   }
-  _displayNone();
+  __displayNone();
   
   if (typeof ___scriptInterval !== 'undefined') clearInterval(___scriptInterval);
   
   var ___scriptInterval = setInterval(() => {
-    _displayNone();
+    __displayNone();
+
     if (document.querySelector('#prompt-textarea')) {
-      window.ReactNativeWebView.postMessage(JSON.stringify({ logged: true, login: true }));
+      window.ReactNativeWebView?.postMessage(JSON.stringify({ logged: true, login: true }));
     }
+
+    if(window.location.href.indexOf("error=OAuthCallback") > -1){
+       window.location.href = '${urlChatGPT}';
+    }
+
   }, 500);
   
   `;
@@ -154,9 +173,9 @@ export const ScriptCheckLoginStartConversation = () => {
 
   getAccessToken((accessToken) => {
     if (accessToken) {
-      window.ReactNativeWebView.postMessage(JSON.stringify({ startConversation: true }));
+      window.ReactNativeWebView?.postMessage(JSON.stringify({ startConversation: true }));
     } else {
-      window.ReactNativeWebView.postMessage(JSON.stringify({ startConversation: false }));
+      window.ReactNativeWebView?.postMessage(JSON.stringify({ startConversation: false }));
     }
   });
   `;
@@ -179,13 +198,21 @@ export const ScriptLogout = () => {
 
 export const ScriptCheckLogout = () => {
   return `if (document.querySelector('body pre')?.innerText ? JSON.parse(document.querySelector('body pre').innerText).accessToken : false) {
-    window.ReactNativeWebView.postMessage(JSON.stringify({ logged: true, logout: true }));
+    window.ReactNativeWebView?.postMessage(JSON.stringify({ logged: true, logout: true }));
   } else if (!document.querySelector('body pre') || !document.querySelector('body pre')?.innerText || document.querySelector('body pre')?.innerText === '{}') {
-    window.ReactNativeWebView.postMessage(JSON.stringify({ logged: false, logout: true }));
+    window.ReactNativeWebView?.postMessage(JSON.stringify({ logged: false, logout: true }));
   }
   `;
 };
 
 export const sleep = (ms: number) => {
   return new Promise((resolve) => setTimeout(resolve, ms));
+};
+
+export const JSONtryParse = (text: string) => {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
 };

@@ -2,12 +2,14 @@ import React, { forwardRef, useImperativeHandle } from 'react';
 import { Dimensions, Modal, Platform, StyleSheet, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import {
+  JSONtryParse,
   ScriptCheckLogged,
   ScriptCheckLoginStartConversation,
   ScriptCheckLogout,
   ScriptGetScriptStartConversation,
   ScriptLoginFinished,
   ScriptLogout,
+  StartLoginChatGPT,
   sleep,
 } from './scripts';
 
@@ -23,16 +25,8 @@ interface ChatGPTProps {}
 const originWhitelist = ['https://*'];
 const userAgent =
   Platform.OS === 'ios'
-    ? 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1'
+    ? 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_1_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1.2 Mobile/15E148 Safari/604.1'
     : 'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.5790.166 Mobile Safari/537.36';
-
-const JSONtryParse = (text: string) => {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return null;
-  }
-};
 
 const urlChatGpt = 'https://chat.openai.com/';
 
@@ -71,6 +65,8 @@ const ChatGPT = forwardRef((props: ChatGPTProps, ref: any) => {
   }, []);
 
   const messageSetLogged = (jsonData: any) => {
+    console.log('messageSetLogged', jsonData);
+
     if (jsonData.logged) {
       setLogged(true);
       setModalLogin(false);
@@ -120,7 +116,6 @@ const ChatGPT = forwardRef((props: ChatGPTProps, ref: any) => {
           }
         });
       } catch (error) {
-        console.log(error);
         if (conversationResolve) conversationResolve({ error: true, message: JSON.stringify(error), data: '' });
       }
     }
@@ -158,20 +153,19 @@ const ChatGPT = forwardRef((props: ChatGPTProps, ref: any) => {
     if (messageConversation) webviewAuthSession?.injectJavaScript(ScriptGetScriptStartConversation(messageConversation));
   };
 
-  const getResponse = () => {
+  const getResponse = async () => {
     if (!logged) {
-      setModalLogin(true);
       return;
     }
 
     webviewAuthSession?.injectJavaScript(ScriptCheckLoginStartConversation());
   };
 
-  const loginChatGPT = () => {
-    if (logged && loginResolve) {
+  const loginChatGPT = async () => {
+    if ((await getValueIsLogged()) && loginResolve) {
       loginResolve({ error: false, message: 'Already logged' });
-    } else if (!logged) {
-      setModalLogin(true);
+    } else {
+      setModalLogin(() => true);
     }
   };
 
@@ -179,7 +173,7 @@ const ChatGPT = forwardRef((props: ChatGPTProps, ref: any) => {
     try {
       resetFunctionsConversation();
       webviewAuthSession?.requestFocus();
-      await sleep(500);
+      await sleep(1000);
       webviewAuthSession?.injectJavaScript(ScriptLogout());
     } catch (error) {
       console.error(error);
@@ -187,22 +181,35 @@ const ChatGPT = forwardRef((props: ChatGPTProps, ref: any) => {
     }
   };
 
+  const getValueIsLogged = async () => {
+    return new Promise((resolve) => {
+      setLogged((currentValue) => {
+        resolve(currentValue);
+        return currentValue;
+      });
+    });
+  };
+
   useImperativeHandle(ref, () => ({
     isLogged: () => {
-      return new Promise((resolve) => {
+      return new Promise(async (resolve) => {
         webviewAuthSession?.requestFocus();
 
-        while (!webviewAuthSession || logged === undefined) {
-          sleep(100);
+        let isLogged = await getValueIsLogged();
+
+        while (!webviewAuthSession || isLogged === undefined) {
+          await sleep(1000);
+          console.log('isLogged', isLogged);
+          isLogged = await getValueIsLogged();
         }
 
-        if (logged) resolve(true);
+        if (await getValueIsLogged()) resolve(true);
         else resolve(false);
       });
     },
     getResponse: (message: string, onProgress: (value: string) => void) => {
       return new Promise(async (resolve) => {
-        if (!logged) {
+        if (!(await getValueIsLogged())) {
           resolve({ error: true, message: 'Login required' });
           return;
         }
@@ -222,33 +229,33 @@ const ChatGPT = forwardRef((props: ChatGPTProps, ref: any) => {
       });
     },
     loginChatGPT: () => {
-      return new Promise((resolve) => {
-        if (logged) {
+      return new Promise(async (resolve) => {
+        if (await getValueIsLogged()) {
           resolve({ error: false, message: 'Already logged' });
           return;
         }
 
         setLoginResolve(() => (value: any) => resolve(value));
 
-        loginChatGPT();
+        await loginChatGPT();
       });
     },
     logoutChatGPT: () => {
-      return new Promise((resolve) => {
-        if (!logged) {
+      return new Promise(async (resolve) => {
+        if (!(await getValueIsLogged())) {
           resolve({ error: false, message: 'Already not logged' });
           return;
         }
 
         setLogoutResolve(() => (value: any) => resolve(value));
 
-        logoutChatGPT();
+        await logoutChatGPT();
       });
     },
   }));
 
   return (
-    <>
+    <View>
       <Modal
         presentationStyle="pageSheet"
         animationType="slide"
@@ -257,7 +264,6 @@ const ChatGPT = forwardRef((props: ChatGPTProps, ref: any) => {
         statusBarTranslucent={true}
         onRequestClose={() => {
           setModalLogin(false);
-          if (conversationResolve) conversationResolve({ error: true, message: 'Login canceled', data: '' });
           if (loginResolve) loginResolve({ error: true, message: 'Login canceled' });
           resetFunctionsConversation();
         }}
@@ -270,9 +276,12 @@ const ChatGPT = forwardRef((props: ChatGPTProps, ref: any) => {
             ref={setWebviewLogin}
             style={styles.container}
             source={{ uri: urlChatGpt }}
-            onLoadEnd={() => webviewLogin?.injectJavaScript(ScriptLoginFinished())}
+            onLoadEnd={() => {
+              webviewLogin?.injectJavaScript(ScriptLoginFinished(urlChatGpt));
+              webviewLogin?.injectJavaScript(StartLoginChatGPT());
+            }}
             onNavigationStateChange={() => {
-              webviewLogin?.injectJavaScript(ScriptLoginFinished());
+              webviewLogin?.injectJavaScript(ScriptLoginFinished(urlChatGpt));
             }}
             onError={() => {
               if (conversationResolve) conversationResolve({ error: true, message: 'Error on chat.openai.com', data: '' });
@@ -292,14 +301,14 @@ const ChatGPT = forwardRef((props: ChatGPTProps, ref: any) => {
         <WebView
           startInLoadingState={false}
           ref={setWebviewAuthSession}
-          source={{
-            uri: urlChatGpt,
-          }}
+          source={{ uri: urlChatGpt }}
           onLoadEnd={async () => {
             webviewAuthSession?.injectJavaScript(ScriptCheckLogged());
           }}
           onNavigationStateChange={(event) => {
-            if (event.url === 'https://chat.openai.com/auth/login') webviewAuthSession?.injectJavaScript(ScriptCheckLogout());
+            if (event.url === 'https://chat.openai.com/auth/login' && logoutResolve) {
+              webviewAuthSession?.injectJavaScript(ScriptCheckLogout());
+            }
           }}
           onError={() => {
             if (conversationResolve) conversationResolve({ error: true, message: 'Error on chat.openai.com', data: '' });
@@ -311,7 +320,7 @@ const ChatGPT = forwardRef((props: ChatGPTProps, ref: any) => {
           webviewDebuggingEnabled={true}
         />
       </View>
-    </>
+    </View>
   );
 });
 
