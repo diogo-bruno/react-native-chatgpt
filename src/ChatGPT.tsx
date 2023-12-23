@@ -4,7 +4,6 @@ import { WebView } from 'react-native-webview';
 import {
   JSONtryParse,
   ScriptCheckLogged,
-  ScriptCheckLoginStartConversation,
   ScriptCheckLogout,
   ScriptGetScriptStartConversation,
   ScriptLoginFinished,
@@ -50,7 +49,6 @@ const ChatGPT = forwardRef((props: ChatGPTProps, ref: any) => {
 
   const resetFunctionsConversation = () => {
     setConversationResolve(undefined);
-
     setConversationOnProgress(undefined);
   };
 
@@ -65,12 +63,9 @@ const ChatGPT = forwardRef((props: ChatGPTProps, ref: any) => {
   }, []);
 
   const messageSetLogged = (jsonData: any) => {
-    console.log('messageSetLogged', jsonData);
-
     if (jsonData.logged) {
       setLogged(true);
       setModalLogin(false);
-      injectScriptConversation();
     } else {
       setLogged(false);
     }
@@ -83,14 +78,6 @@ const ChatGPT = forwardRef((props: ChatGPTProps, ref: any) => {
     if (logoutResolve && jsonData.logout) {
       logoutResolve({ error: false, message: 'Logout success' });
       resetFunctionsLoginLogout();
-    }
-  };
-
-  const messageCheckLoginStartConversation = (jsonData: any) => {
-    if (jsonData.startConversation) {
-      injectScriptConversation();
-    } else {
-      setModalLogin(true);
     }
   };
 
@@ -135,11 +122,6 @@ const ChatGPT = forwardRef((props: ChatGPTProps, ref: any) => {
         return;
       }
 
-      if (dataJson && dataJson?.startConversation !== undefined) {
-        messageCheckLoginStartConversation(dataJson);
-        return;
-      }
-
       if (dataJson && dataJson?.conversation !== undefined) {
         messageResponseText(dataJson.conversation);
       }
@@ -147,18 +129,6 @@ const ChatGPT = forwardRef((props: ChatGPTProps, ref: any) => {
       console.error(error);
       if (conversationResolve) conversationResolve({ error: true, message: JSON.stringify(error), data: '' });
     }
-  };
-
-  const injectScriptConversation = () => {
-    if (messageConversation) webviewAuthSession?.injectJavaScript(ScriptGetScriptStartConversation(messageConversation));
-  };
-
-  const getResponse = async () => {
-    if (!logged) {
-      return;
-    }
-
-    webviewAuthSession?.injectJavaScript(ScriptCheckLoginStartConversation());
   };
 
   const loginChatGPT = async () => {
@@ -220,12 +190,10 @@ const ChatGPT = forwardRef((props: ChatGPTProps, ref: any) => {
 
         setMessageConversation(message);
 
-        webviewAuthSession?.requestFocus();
-        webviewAuthSession?.injectJavaScript(`window.location.href = '${urlChatGpt}';`);
-
-        await sleep(500);
-
-        getResponse();
+        if (logged) {
+          webviewAuthSession?.requestFocus();
+          webviewAuthSession?.injectJavaScript(`window.location.href = '${urlChatGpt}';`);
+        }
       });
     },
     loginChatGPT: () => {
@@ -304,6 +272,8 @@ const ChatGPT = forwardRef((props: ChatGPTProps, ref: any) => {
           source={{ uri: urlChatGpt }}
           onLoadEnd={async () => {
             webviewAuthSession?.injectJavaScript(ScriptCheckLogged());
+
+            if (messageConversation) webviewAuthSession?.injectJavaScript(ScriptGetScriptStartConversation(messageConversation));
           }}
           onNavigationStateChange={(event) => {
             if (event.url === 'https://chat.openai.com/auth/login' && logoutResolve) {
