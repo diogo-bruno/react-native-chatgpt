@@ -142,7 +142,6 @@ const ChatGPT = forwardRef((props: ChatGPTProps, ref: any) => {
   const logoutChatGPT = async () => {
     try {
       resetFunctionsConversation();
-      webviewAuthSession?.requestFocus();
       await sleep(1000);
       webviewAuthSession?.injectJavaScript(ScriptLogout());
     } catch (error) {
@@ -163,8 +162,6 @@ const ChatGPT = forwardRef((props: ChatGPTProps, ref: any) => {
   useImperativeHandle(ref, () => ({
     isLogged: () => {
       return new Promise(async (resolve) => {
-        webviewAuthSession?.requestFocus();
-
         let isLogged = await getValueIsLogged();
 
         while (!webviewAuthSession || isLogged === undefined) {
@@ -191,7 +188,6 @@ const ChatGPT = forwardRef((props: ChatGPTProps, ref: any) => {
         setMessageConversation(message);
 
         if (logged) {
-          webviewAuthSession?.requestFocus();
           webviewAuthSession?.injectJavaScript(`window.location.href = '${urlChatGpt}';`);
         }
       });
